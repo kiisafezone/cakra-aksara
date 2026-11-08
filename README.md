@@ -10,10 +10,14 @@
 ![Development Stage](https://img.shields.io/badge/Stage-Pre--Alpha-blue)
 ![License](https://img.shields.io/badge/License-Apache%202.0-blue)
 
-An open-source intelligence and governance layer connecting AI models,
-agents, memory, context, and knowledge into one unified ecosystem.
+<p align="center">
+  An open-source intelligence and governance layer connecting AI models,<br>
+  agents, memory, context, and knowledge into one unified ecosystem.
+</p>
 
-> ⚠️ Cakra Aksara is currently under active development.
-> Features, APIs, and architecture may change.
+<p align="center">
+  ⚠️ <strong>Cakra Aksara is currently under active development.</strong><br>
+  Features, APIs, and architecture may change.
+</p>
 
 </div>
