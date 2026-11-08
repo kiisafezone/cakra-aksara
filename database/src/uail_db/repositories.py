@@ -1,6 +1,6 @@
 """Tenant-scoped repositories. Repositories never commit; services own transactions."""
 from typing import Any, TypeVar
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 from .models import (
     APIKey, Assumption, AuditEvent, Claim, ContextItem, ContinuityPackage,
@@ -99,22 +99,60 @@ class MemoryRepository:
             Memory.deleted_at.is_(None), Memory.status != "deleted",
         ))
 
-    def update(self, *, tenant_id: str, memory_id: str, content: str,
-               expected_version: int, reason: str | None = None,
-               changed_by: str | None = None) -> Memory:
-        memory = self.get(tenant_id=tenant_id, memory_id=memory_id)
-        if memory is None:
-            raise LookupError("memory not found")
-        if memory.current_version != expected_version:
-            raise ValueError("version conflict")
+    def update(
+        self,
+        *,
+        tenant_id: str,
+        memory_id: str,
+        content: str,
+        expected_version: int,
+        reason: str | None = None,
+        changed_by: str | None = None,
+    ) -> Memory:
         next_version = expected_version + 1
-        memory.content = content
-        memory.current_version = next_version
-        self.session.add(MemoryVersion(
-            tenant_id=tenant_id, memory_id=memory.id, version_number=next_version,
-            content_snapshot=content, change_reason=reason, changed_by=changed_by,
-        ))
+
+        result = self.session.execute(
+            update(Memory)
+            .where(
+                Memory.id == memory_id,
+                Memory.tenant_id == tenant_id,
+                Memory.current_version == expected_version,
+                Memory.deleted_at.is_(None),
+                Memory.status != "deleted",
+            )
+            .values(
+                content=content,
+                current_version=next_version,
+            )
+            .execution_options(synchronize_session="fetch")
+        )
+
+        if result.rowcount != 1:
+            existing = self.session.scalar(
+                select(Memory.id).where(
+                    Memory.id == memory_id,
+                    Memory.tenant_id == tenant_id,
+                    Memory.deleted_at.is_(None),
+                    Memory.status != "deleted",
+                )
+            )
+            if existing is None:
+                raise LookupError("memory not found")
+            raise ValueError("version conflict")
+
+        self.session.add(
+            MemoryVersion(
+                tenant_id=tenant_id,
+                memory_id=memory_id,
+                version_number=next_version,
+                content_snapshot=content,
+                change_reason=reason,
+                changed_by=changed_by,
+            )
+        )
         self.session.flush()
+
+        memory = self.session.get(Memory, memory_id)
         return memory
 
     def list(self, *, tenant_id: str, owner_user_id: str | None = None,

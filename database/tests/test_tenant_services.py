@@ -72,3 +72,122 @@ def test_generic_repository_is_tenant_scoped_and_validates_fields(session):
     assert repo.list(tenant_id=a.id, request_type="analysis") == [item]
     with pytest.raises(ValueError):
         repo.update(tenant_id=a.id, entity_id=item.id, id="tampered")
+
+
+def test_missing_actor_cannot_create_or_list_memories(session):
+    a, b, ua, ub = tenants(session)
+    svc = MemoryService(session)
+
+    with pytest.raises(TenantAccessError):
+        svc.create(
+            tenant_id=a.id,
+            actor_user_id=None,
+            content="must not become shared",
+            category="fact",
+        )
+
+    with pytest.raises(TenantAccessError):
+        svc.list(tenant_id=a.id, actor_user_id=None)
+
+
+def test_regular_user_cannot_create_or_modify_shared_memory(session):
+    a, b, ua, ub = tenants(session)
+    admin = User(
+        tenant_id=a.id,
+        email="admin@example.test",
+        role="admin",
+    )
+    session.add(admin)
+    session.commit()
+
+    svc = MemoryService(session)
+
+    with pytest.raises(TenantAccessError):
+        svc.create(
+            tenant_id=a.id,
+            actor_user_id=ua.id,
+            content="unauthorized shared memory",
+            category="fact",
+            shared=True,
+        )
+
+    shared = svc.create(
+        tenant_id=a.id,
+        actor_user_id=admin.id,
+        content="approved shared memory",
+        category="fact",
+        shared=True,
+    )
+
+    # Regular users may read shared memories.
+    assert svc.get(
+        tenant_id=a.id,
+        actor_user_id=ua.id,
+        memory_id=shared.id,
+    ).id == shared.id
+
+    with pytest.raises(TenantAccessError):
+        svc.update(
+            tenant_id=a.id,
+            actor_user_id=ua.id,
+            memory_id=shared.id,
+            content="unauthorized change",
+            expected_version=1,
+        )
+
+    with pytest.raises(TenantAccessError):
+        svc.delete(
+            tenant_id=a.id,
+            actor_user_id=ua.id,
+            memory_id=shared.id,
+        )
+
+
+def test_admin_can_update_and_delete_shared_memory(session):
+    a, b, ua, ub = tenants(session)
+    admin = User(
+        tenant_id=a.id,
+        email="admin2@example.test",
+        role="admin",
+    )
+    session.add(admin)
+    session.commit()
+
+    svc = MemoryService(session)
+    shared = svc.create(
+        tenant_id=a.id,
+        actor_user_id=admin.id,
+        content="shared v1",
+        category="fact",
+        shared=True,
+    )
+
+    updated = svc.update(
+        tenant_id=a.id,
+        actor_user_id=admin.id,
+        memory_id=shared.id,
+        content="shared v2",
+        expected_version=1,
+    )
+    assert updated.current_version == 2
+
+    svc.delete(
+        tenant_id=a.id,
+        actor_user_id=admin.id,
+        memory_id=shared.id,
+    )
+
+    assert svc.repo.get(tenant_id=a.id, memory_id=shared.id) is None
+
+
+def test_actor_from_another_tenant_is_rejected(session):
+    a, b, ua, ub = tenants(session)
+    svc = MemoryService(session)
+
+    with pytest.raises(TenantAccessError):
+        svc.create(
+            tenant_id=a.id,
+            actor_user_id=ub.id,
+            content="cross tenant attempt",
+            category="fact",
+        )
