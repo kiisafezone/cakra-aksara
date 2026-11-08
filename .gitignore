@@ -8,6 +8,11 @@ __pycache__/
 .venv/
 venv/
 
+# Secrets and local environment files
+.env
+.env.*
+!.env.example
+
 # Test and coverage
 .pytest_cache/
 .coverage
@@ -15,3 +20,5 @@ htmlcov/
 
 # Local database
 *.db
+*.sqlite
+*.sqlite3
