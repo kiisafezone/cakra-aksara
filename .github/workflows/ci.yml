@@ -51,3 +51,12 @@ jobs:
         working-directory: database
         run: |
           alembic heads
+
+          
+      - name: Upgrade a fresh SQLite database to head
+        working-directory: database
+        env:
+          DATABASE_URL: sqlite:///./ci_fresh.db
+        run: |
+          alembic upgrade head
+          alembic current
