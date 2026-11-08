@@ -1,14 +1,13 @@
-#Cakra Aksara
+# Cakra Aksara
 
-Universal AI Intelligence Layer
+**Universal AI Intelligence Layer
+One Intelligence. Connected Everywhere.**
 
-One Intelligence. Connected Everywhere.
+An open-source intelligence and governance layer connecting AI models, agents, memory, context, and knowledge into one unified ecosystem.
 
-«An open-source intelligence and governance layer connecting AI models, agents, memory, context, and knowledge into one unified ecosystem.»
-
-"Status" (https://img.shields.io/badge/status-under%20development-orange)
-"License" (https://img.shields.io/badge/license-Apache%202.0-blue)
-"Version" (https://img.shields.io/badge/version-0.1.0--dev-lightgrey)
+![Project Status](https://img.shields.io/badge/Project%20Status-Under%20Development-orange)
+![Development Stage](https://img.shields.io/badge/Stage-Pre--Alpha-blue)
+![License](https://img.shields.io/badge/License-Apache%202.0-blue)
 
 ---
 
