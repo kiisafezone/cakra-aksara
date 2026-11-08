@@ -1,0 +1,53 @@
+name: Cakra Aksara CI
+
+on:
+  push:
+    branches:
+      - main
+      - feature/**
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.14"]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: database/pyproject.toml
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e "database[dev]"
+
+      - name: Compile Python modules
+        run: |
+          python -m compileall -q database/src api/app
+
+      - name: Run database tests
+        run: |
+          python -m pytest database/tests -q
+
+      - name: Check Alembic migration heads
+        working-directory: database
+        run: |
+          alembic heads
